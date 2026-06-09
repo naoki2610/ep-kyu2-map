@@ -13,13 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f6f9;
-            color: #333;
-        }
+        body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f9; color: #333; }
         .container { max-width: 1350px; margin: 0 auto; }
         .header-flex { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
         h1 { margin: 0 0 5px 0; font-size: 24px; color: #2c3e50; }
@@ -27,54 +21,23 @@
         @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
         .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         
-        /* マップ外枠 (横300mm 縦185mm の96dpi近似値: 1134px × 700px) */
-        .map-outer-wrapper {
-            position: relative;
-            width: 1134px;
-            height: 700px;
-            background: #fff;
-            border: 2px solid #2c3e50;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
+        .map-outer-wrapper { position: relative; width: 1134px; height: 700px; background: #fff; border: 2px solid #2c3e50; box-sizing: border-box; overflow: hidden; }
         #map { width: 100%; height: 100%; }
+        .error-overlay { padding: 30px; color: #e74c3c; font-weight: bold; font-size: 14px; background: #fdf0ed; height: 100%; box-sizing: border-box; }
 
-        /* 装飾系（マーカー、スケール、コンパス） */
-        .permanent-marker-label {
-            background: rgba(255, 255, 255, 0.92); border: 1px solid #2c3e50;
-            border-radius: 4px; padding: 3px 7px; font-size: 12px; font-weight: bold;
-            color: #2c3e50; box-shadow: 0 1px 4px rgba(0,0,0,0.2); white-space: nowrap;
-        }
-        .custom-scale-container {
-            position: absolute; bottom: 25px; right: 25px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.9); padding: 8px 12px;
-            border: 1px solid #333; border-radius: 4px; pointer-events: none;
-        }
+        .permanent-marker-label { background: rgba(255, 255, 255, 0.92); border: 1px solid #2c3e50; border-radius: 4px; padding: 3px 7px; font-size: 12px; font-weight: bold; color: #2c3e50; box-shadow: 0 1px 4px rgba(0,0,0,0.2); white-space: nowrap; }
+        .custom-scale-container { position: absolute; bottom: 25px; right: 25px; z-index: 1000; background: rgba(255, 255, 255, 0.9); padding: 8px 12px; border: 1px solid #333; border-radius: 4px; pointer-events: none; }
         .scale-text { font-size: 12px; font-weight: bold; margin-bottom: 3px; text-align: center; }
         .zebra-bar { display: flex; width: 150px; height: 8px; border: 1px solid #000; }
         .zebra-block { flex: 1; height: 100%; }
         .zebra-block.black { background: #000; }
         .zebra-block.white { background: #fff; }
         .scale-labels { display: flex; justify-content: space-between; font-size: 10px; margin-top: 2px; }
-        .compass-rose {
-            position: absolute; top: 25px; left: 25px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.9); border: 1px solid #333;
-            border-radius: 50%; width: 55px; height: 55px; display: flex;
-            align-items: center; justify-content: center; pointer-events: none;
-        }
-        .compass-arrow {
-            width: 0; height: 0; border-left: 7px solid transparent;
-            border-right: 7px solid transparent; border-bottom: 22px solid #c0392b;
-            position: relative; top: -10px;
-        }
-        .compass-arrow::after {
-            content: ''; width: 0; height: 0; border-left: 7px solid transparent;
-            border-right: 7px solid transparent; border-top: 22px solid #2c3e50;
-            position: absolute; top: 22px; left: -7px;
-        }
+        .compass-rose { position: absolute; top: 25px; left: 25px; z-index: 1000; background: rgba(255, 255, 255, 0.9); border: 1px solid #333; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+        .compass-arrow { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 22px solid #c0392b; position: relative; top: -10px; }
+        .compass-arrow::after { content: ''; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 22px solid #2c3e50; position: absolute; top: 22px; left: -7px; }
         .compass-n { position: absolute; top: 2px; font-size: 11px; font-weight: bold; color: #c0392b; }
 
-        /* フォーム関連 */
         .form-panel { width: 380px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
         .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 12px; }
@@ -82,7 +45,6 @@
         label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #555; }
         input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
         
-        /* タブ切替UI */
         .input-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 4px; }
         .input-tabs label { margin: 0; flex: 1; text-align: center; font-size: 11px; cursor: pointer; padding: 6px 2px; background: #fff; border: 1px solid #ddd; border-radius: 4px; user-select: none; }
         .input-tabs input[type="radio"] { display: none; }
@@ -94,7 +56,6 @@
         .calc-preview { background-color: #eef7f2; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
         .calc-preview p { margin: 4px 0; font-size: 12px; font-family: monospace; }
         
-        /* ボタン系 */
         .btn { background-color: #27ae60; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; }
         .btn:hover { background-color: #219653; }
         .btn-excel { background-color: #2e7d32; display: inline-flex; align-items: center; justify-content: center; width: auto; padding: 10px 18px; margin-bottom: 10px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;}
@@ -106,7 +67,6 @@
         th, td { padding: 9px; text-align: left; border-bottom: 1px solid #eee; }
         th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; }
         .notice { font-size: 11px; color: #7f8c8d; margin-top: 6px; }
-        .table-header-flex { display: flex; justify-content: space-between; align-items: center; }
         .photo-status { font-size: 11px; color: #e67e22; font-weight: bold; margin-top: 5px; }
     </style>
 </head>
@@ -118,21 +78,26 @@
             <h1>高精度地図マッピング・図面生成システム (九州地方専用版)</h1>
             <p style="margin: 0; color: #666; font-size: 13px;">座標系の相互変換(Proj4js)、10進法・度分秒・XY座標・写真EXIFからの位置情報入力に対応しています。</p>
         </div>
-        <button type="button" class="btn-export-img" onclick="exportMapImage()">📸 地図の切り出し保存 (マーカー非表示)</button>
+        <button type="button" class="btn-export-img" onclick="exportMapImage()">📸 地図の切り出し保存 (マーカー・装飾非表示)</button>
     </div>
 
     <div class="grid">
-        <div class="map-outer-wrapper" id="map-capture-area">
-            <div class="compass-rose"><div class="compass-n">N</div><div class="compass-arrow"></div></div>
-            <div class="custom-scale-container">
-                <div class="scale-text" id="scale-numeric">縮尺 1 : --</div>
-                <div class="zebra-bar" id="zebra-bar-id">
-                    <div class="zebra-block black"></div><div class="zebra-block white"></div>
-                    <div class="zebra-block black"></div><div class="zebra-block white"></div>
+        <div>
+            <div class="map-outer-wrapper" id="map-capture-area">
+                <div class="compass-rose" id="map-compass"><div class="compass-n">N</div><div class="compass-arrow"></div></div>
+                <div class="custom-scale-container" id="map-scale">
+                    <div class="scale-text" id="scale-numeric">縮尺 1 : --</div>
+                    <div class="zebra-bar" id="zebra-bar-id">
+                        <div class="zebra-block black"></div><div class="zebra-block white"></div>
+                        <div class="zebra-block black"></div><div class="zebra-block white"></div>
+                    </div>
+                    <div class="scale-labels"><span>0</span><span id="scale-max-text">-- m</span></div>
                 </div>
-                <div class="scale-labels"><span>0</span><span id="scale-max-text">-- m</span></div>
+                <div id="map"></div>
             </div>
-            <div id="map"></div>
+            <div style="text-align: right; font-size: 11px; color: #7f8c8d; margin-top: 6px;">
+                ※背景地図データ出典: 国土地理院 (Leaflet利用)
+            </div>
         </div>
 
         <div class="card form-panel">
@@ -188,7 +153,7 @@
                 <div id="section-photo" class="input-section">
                     <div class="form-group">
                         <label>GPS情報付きの画像を選択</label>
-                        <input type="file" id="p-photo" accept="image/jpeg, image/png, image/heic">
+                        <input type="file" id="p-photo">
                         <div id="photo-status" class="photo-status">画像が選択されていません</div>
                     </div>
                 </div>
@@ -208,7 +173,8 @@
                     <label style="color: #27ae60;">【計算プレビュー】</label>
                     <p><strong>X (南北):</strong> <span id="view-x">0.000</span> m</p>
                     <p><strong>Y (東西):</strong> <span id="view-y">0.000</span> m</p>
-                    <p><strong>緯度:</strong> <span id="view-lat">0.000000</span> / <strong>経度:</strong> <span id="view-lng">0.000000</span></p>
+                    <p><strong>緯度(10進法):</strong> <span id="view-lat">0.000000</span> / <strong>経度(10進法):</strong> <span id="view-lng">0.000000</span></p>
+                    <p><strong>緯度(度分秒):</strong> <span id="view-lat-dms">0度0分0.000秒</span> / <strong>経度(度分秒):</strong> <span id="view-lng-dms">0度0分0.000秒</span></p>
                 </div>
                 <button type="submit" class="btn">データを追加・マッピング</button>
             </form>
@@ -235,12 +201,21 @@
 </div>
 
 <script>
-    // ----------------------------------------------------
-    // 1. Proj4jsによる日本の平面直角座標系の定義 (JGD2011)
-    // ----------------------------------------------------
-    proj4.defs("EPSG:6669","+proj=tmerc +lat_0=33 +lon_0=129.5 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
-    proj4.defs("EPSG:6670","+proj=tmerc +lat_0=33 +lon_0=131 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
-    proj4.defs("EPSG:6671","+proj=tmerc +lat_0=36 +lon_0=132.1 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+    // --- グローバル変数の定義 ---
+    let map = null;
+    let markersLayer = null;
+    let dbPoints = [];
+    let photoExtractedLatLng = null;
+
+    // --- セーフティ機構（外部ライブラリがブロックされた場合でも動作を継続する） ---
+    const isProj4Loaded = typeof proj4 !== 'undefined';
+    const isLeafletLoaded = typeof L !== 'undefined';
+
+    if (isProj4Loaded) {
+        proj4.defs("EPSG:6669","+proj=tmerc +lat_0=33 +lon_0=129.5 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+        proj4.defs("EPSG:6670","+proj=tmerc +lat_0=33 +lon_0=131 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+        proj4.defs("EPSG:6671","+proj=tmerc +lat_0=36 +lon_0=132.1 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+    }
 
     function getEpsg(zone) {
         if (zone == 1) return "EPSG:6669";
@@ -249,24 +224,57 @@
         return "EPSG:6670";
     }
 
-    // ----------------------------------------------------
-    // 2. マップ初期化
-    // ----------------------------------------------------
-    const stdMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { attribution: '&copy; GSI Japan', crossOrigin: true });
-    const orthoMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{y}.jpg', { attribution: '&copy; GSI Japan', crossOrigin: true });
-    
-    // 初期表示位置を大隅半島周辺に変更
-    const map = L.map('map', { center: [31.186043, 130.833448], zoom: 11, layers: [stdMap], zoomControl: false });
-    L.control.layers({ "標準地図": stdMap, "航空写真": orthoMap }, null, { position: 'topright' }).addTo(map);
-    let markersLayer = L.layerGroup().addTo(map);
+    // --- マップ初期化処理 ---
+    if (isLeafletLoaded) {
+        try {
+            const stdMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { attribution: '&copy; GSI Japan', crossOrigin: true });
+            const orthoMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{y}.jpg', { attribution: '&copy; GSI Japan', crossOrigin: true });
+            const reliefMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', { attribution: '&copy; GSI Japan', crossOrigin: true, maxNativeZoom: 15 });
+            const hillshadeMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png', { attribution: '&copy; GSI Japan', crossOrigin: true, maxNativeZoom: 16 });
+            
+            map = L.map('map', { 
+                center: [31.186043, 130.833448], 
+                zoom: 11, 
+                layers: [stdMap], 
+                zoomControl: false,
+                attributionControl: false 
+            });
+            
+            L.control.layers({ 
+                "標準地図": stdMap, 
+                "航空写真": orthoMap,
+                "色別標高図 (カシミール風)": reliefMap,
+                "陰影起伏図 (地形強調)": hillshadeMap
+            }, null, { position: 'topright' }).addTo(map);
 
-    let dbPoints = [];
-    let photoExtractedLatLng = null;
+            markersLayer = L.layerGroup().addTo(map);
 
-    // ----------------------------------------------------
-    // 3. スケールバー連動処理
-    // ----------------------------------------------------
+            map.on('zoomend moveend', updateScaleElements);
+            
+            map.on('click', function(e) {
+                if (e.latlng.lat < 29.0 || e.latlng.lat > 35.5 || e.latlng.lng < 127.0 || e.latlng.lng > 132.5) {
+                    alert("九州地方の計測範囲外です。選択範囲を九州エリア内にしてください。");
+                    return;
+                }
+                document.querySelector('input[value="decimal"]').checked = true;
+                document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
+                document.getElementById('section-decimal').classList.add('active');
+
+                document.getElementById('p-lat').value = e.latlng.lat.toFixed(6);
+                document.getElementById('p-lng').value = e.latlng.lng.toFixed(6);
+                performLiveCalculation();
+            });
+        } catch (error) {
+            console.error("Leafletの初期化エラー:", error);
+        }
+    } else {
+        // ライブラリが読み込めなかった場合のエラー表示
+        document.getElementById('map').innerHTML = '<div class="error-overlay">【セキュリティ制限によるエラー】<br><br>地図ライブラリ(Leaflet)がブラウザによりブロックされています。<br>このHTMLファイルを直接PCで開いている場合、Edge等のセキュリティ機能が外部通信を遮断することがあります。<br><br>※プレビューや座標計算は引き続き可能ですが、地図の表示・切り出しを行うには、以前作成された「GitHub Pages」のURLからアクセスしてください。</div>';
+    }
+
+    // --- スケールバー連動処理 ---
     function updateScaleElements() {
+        if (!map) return;
         const centerLatLng = map.getCenter();
         const zoom = map.getZoom();
         const metersPerPixel = (40075016 * Math.cos(centerLatLng.lat * Math.PI / 180)) / Math.pow(2, zoom + 8);
@@ -285,11 +293,8 @@
         document.getElementById('zebra-bar-id').style.width = (displayMeters / metersPerPixel) + "px";
         document.getElementById('scale-max-text').innerText = (displayMeters >= 1000) ? (displayMeters / 1000) + " km" : displayMeters + " m";
     }
-    map.on('zoomend moveend', updateScaleElements);
 
-    // ----------------------------------------------------
-    // 4. UIタブ切り替え & 入力計算処理
-    // ----------------------------------------------------
+    // --- 入力・計算処理 ---
     document.querySelectorAll('input[name="input_mode"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
@@ -318,7 +323,7 @@
         } else if (mode === 'xy') {
             const x = parseFloat(document.getElementById('p-x').value);
             const y = parseFloat(document.getElementById('p-y').value);
-            if (!isNaN(x) && !isNaN(y)) {
+            if (!isNaN(x) && !isNaN(y) && isProj4Loaded) {
                 const result = proj4(getEpsg(zone), 'EPSG:4326', [y, x]);
                 lng = result[0];
                 lat = result[1];
@@ -332,6 +337,16 @@
         return { lat: (isNaN(lat) ? 0 : lat), lng: (isNaN(lng) ? 0 : lng) };
     }
 
+    function toDMS(deg) {
+        if (isNaN(deg) || deg === 0) return { d: 0, m: 0, s: 0 };
+        const absolute = Math.abs(deg);
+        const d = Math.floor(absolute);
+        const minFloat = (absolute - d) * 60;
+        const m = Math.floor(minFloat);
+        const s = (minFloat - m) * 60;
+        return { d: d * (deg < 0 ? -1 : 1), m: m, s: s };
+    }
+
     function performLiveCalculation() {
         const coords = getCurrentLatLng();
         const zone = parseInt(document.getElementById('p-zone').value);
@@ -340,12 +355,24 @@
             document.getElementById('view-lat').innerText = coords.lat.toFixed(6);
             document.getElementById('view-lng').innerText = coords.lng.toFixed(6);
             
-            const xy = proj4('EPSG:4326', getEpsg(zone), [coords.lng, coords.lat]);
-            document.getElementById('view-x').innerText = xy[1].toFixed(3);
-            document.getElementById('view-y').innerText = xy[0].toFixed(3);
+            const latDMS = toDMS(coords.lat);
+            const lngDMS = toDMS(coords.lng);
+            document.getElementById('view-lat-dms').innerText = latDMS.d + "度" + latDMS.m + "分" + latDMS.s.toFixed(3) + "秒";
+            document.getElementById('view-lng-dms').innerText = lngDMS.d + "度" + lngDMS.m + "分" + lngDMS.s.toFixed(3) + "秒";
+            
+            if (isProj4Loaded) {
+                const xy = proj4('EPSG:4326', getEpsg(zone), [coords.lng, coords.lat]);
+                document.getElementById('view-x').innerText = xy[1].toFixed(3);
+                document.getElementById('view-y').innerText = xy[0].toFixed(3);
+            } else {
+                document.getElementById('view-x').innerText = "通信ブロック中";
+                document.getElementById('view-y').innerText = "通信ブロック中";
+            }
         } else {
             document.getElementById('view-lat').innerText = "0.000";
             document.getElementById('view-lng').innerText = "0.000";
+            document.getElementById('view-lat-dms').innerText = "0度0分0.000秒";
+            document.getElementById('view-lng-dms').innerText = "0度0分0.000秒";
             document.getElementById('view-x').innerText = "0.000";
             document.getElementById('view-y').innerText = "0.000";
         }
@@ -357,9 +384,6 @@
         if(el) { el.addEventListener('input', performLiveCalculation); el.addEventListener('change', performLiveCalculation); }
     });
 
-    // ----------------------------------------------------
-    // 5. スマホ写真からのEXIF (GPS) 取得
-    // ----------------------------------------------------
     document.getElementById('p-photo').addEventListener('change', async function(e) {
         const file = e.target.files[0];
         const statusEl = document.getElementById('photo-status');
@@ -369,17 +393,22 @@
         statusEl.style.color = "#3498db";
         
         try {
-            const gps = await exifr.gps(file);
-            if (gps && gps.latitude && gps.longitude) {
-                photoExtractedLatLng = { lat: gps.latitude, lng: gps.longitude };
-                statusEl.innerText = `✅ 取得成功: 緯度 ${gps.latitude.toFixed(6)}, 経度 ${gps.longitude.toFixed(6)}`;
-                statusEl.style.color = "#27ae60";
-                performLiveCalculation();
+            if (typeof exifr !== 'undefined') {
+                const gps = await exifr.gps(file);
+                if (gps && gps.latitude && gps.longitude) {
+                    photoExtractedLatLng = { lat: gps.latitude, lng: gps.longitude };
+                    statusEl.innerText = `✅ 取得成功: 緯度 ${gps.latitude.toFixed(6)}, 経度 ${gps.longitude.toFixed(6)}`;
+                    statusEl.style.color = "#27ae60";
+                    performLiveCalculation();
+                } else {
+                    photoExtractedLatLng = null;
+                    statusEl.innerText = "❌ 写真に位置情報(GPS)が含まれていません。";
+                    statusEl.style.color = "#e74c3c";
+                    performLiveCalculation();
+                }
             } else {
-                photoExtractedLatLng = null;
-                statusEl.innerText = "❌ 写真に位置情報(GPS)が含まれていません。";
-                statusEl.style.color = "#e74c3c";
-                performLiveCalculation();
+                 statusEl.innerText = "❌ 解析ライブラリがセキュリティによりブロックされています。";
+                 statusEl.style.color = "#e74c3c";
             }
         } catch (error) {
             console.error(error);
@@ -389,35 +418,41 @@
         }
     });
 
-    // ----------------------------------------------------
-    // 6. マップ上クリックで10進法タブに座標をセット
-    // ----------------------------------------------------
-    map.on('click', function(e) {
-        if (e.latlng.lat < 29.0 || e.latlng.lat > 35.5 || e.latlng.lng < 127.0 || e.latlng.lng > 132.5) {
-            alert("九州地方の計測範囲外です。選択範囲を九州エリア内にしてください。");
-            return;
-        }
-        document.querySelector('input[value="decimal"]').checked = true;
-        document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
-        document.getElementById('section-decimal').classList.add('active');
+    document.getElementById('survey-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const coords = getCurrentLatLng();
+        const zone = parseInt(document.getElementById('p-zone').value);
 
-        document.getElementById('p-lat').value = e.latlng.lat.toFixed(6);
-        document.getElementById('p-lng').value = e.latlng.lng.toFixed(6);
-        performLiveCalculation();
+        if (!coords.lat || !coords.lng) { alert("座標が正しく入力または取得されていません。"); return; }
+        if (coords.lat < 29.0 || coords.lat > 35.5 || coords.lng < 127.0 || coords.lng > 132.5) { alert("九州地方の範囲外の座標です。"); return; }
+
+        if (isProj4Loaded) {
+            const xy = proj4('EPSG:4326', getEpsg(zone), [coords.lng, coords.lat]);
+            dbPoints.push({
+                name: document.getElementById('p-name').value,
+                zone: zone, lat: coords.lat, lng: coords.lng,
+                ele: parseFloat(document.getElementById('p-ele').value) || 0,
+                x: xy[1], y: xy[0]
+            });
+            render();
+            if(map) map.panTo([coords.lat, coords.lng]);
+            document.getElementById('p-name').value = "";
+        } else {
+             alert("座標計算ライブラリがブロックされているため登録できません。");
+        }
     });
 
-    // ----------------------------------------------------
-    // 7. マッピング & データ登録
-    // ----------------------------------------------------
     function render() {
-        markersLayer.clearLayers();
+        if (markersLayer) markersLayer.clearLayers();
         const tbody = document.querySelector("#data-table tbody");
         tbody.innerHTML = "";
         dbPoints.forEach(p => {
-            const m = L.marker([p.lat, p.lng]).bindTooltip(p.name, {
-                permanent: true, direction: 'top', className: 'permanent-marker-label', offset: [0, -10]
-            });
-            markersLayer.addLayer(m);
+            if (markersLayer && isLeafletLoaded) {
+                const m = L.marker([p.lat, p.lng]).bindTooltip(p.name, {
+                    permanent: true, direction: 'top', className: 'permanent-marker-label', offset: [0, -10]
+                });
+                markersLayer.addLayer(m);
+            }
             const row = `<tr>
                 <td><b>${p.name}</b></td><td>第 ${p.zone} 系</td>
                 <td>${p.x.toFixed(3)}</td><td>${p.y.toFixed(3)}</td><td>${p.ele.toFixed(2)}</td>
@@ -427,31 +462,7 @@
         });
     }
 
-    document.getElementById('survey-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const coords = getCurrentLatLng();
-        const zone = parseInt(document.getElementById('p-zone').value);
-
-        if (!coords.lat || !coords.lng) { alert("座標が正しく入力または取得されていません。"); return; }
-        if (coords.lat < 29.0 || coords.lat > 35.5 || coords.lng < 127.0 || coords.lng > 132.5) { alert("九州地方の範囲外の座標です。"); return; }
-
-        const xy = proj4('EPSG:4326', getEpsg(zone), [coords.lng, coords.lat]);
-        
-        dbPoints.push({
-            name: document.getElementById('p-name').value,
-            zone: zone, lat: coords.lat, lng: coords.lng,
-            ele: parseFloat(document.getElementById('p-ele').value) || 0,
-            x: xy[1], y: xy[0]
-        });
-        render();
-        map.panTo([coords.lat, coords.lng]);
-        document.getElementById('p-name').value = "";
-    });
-
-    // ----------------------------------------------------
-    // 8. Excelエクスポート機能
-    // ----------------------------------------------------
-    function exportToExcel() {
+    window.exportToExcel = function() {
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
         let csvContent = "地点名,適用系,公共座標 X (南北),公共座標 Y (東西),標高 Z (m),緯度,経度\n";
         dbPoints.forEach(p => {
@@ -466,41 +477,48 @@
             link.click();
             document.body.removeChild(link);
         }
-    }
+    };
 
-    // ----------------------------------------------------
-    // 9. 地図画像の切り出し (追加機能)
-    // ----------------------------------------------------
-    async function exportMapImage() {
-        // 1. マーカー（ピンとラベル）を一時的に非表示にする
+    window.exportMapImage = async function() {
+        if (!map || typeof html2canvas === 'undefined') {
+            alert("地図表示、または画像生成システムがセキュリティ制限によりブロックされているため切り出しできません。");
+            return;
+        }
+
         map.removeLayer(markersLayer);
+        const compass = document.getElementById('map-compass');
+        const scaleBar = document.getElementById('map-scale');
         
-        // 2. 描画の反映を少し待つ
+        if (compass) compass.style.display = 'none';
+        if (scaleBar) scaleBar.style.display = 'none';
+        
         await new Promise(resolve => setTimeout(resolve, 300));
         
         const captureTarget = document.getElementById('map-capture-area');
         
-        // 3. html2canvasで画像化（縮尺とコンパスは範囲内なので自動的に含まれます）
         html2canvas(captureTarget, {
-            useCORS: true,       // 地理院タイルの外部画像読み込みを許可
+            useCORS: true,
             allowTaint: false,
-            scale: 2             // 高画質化 (PDF印刷等でも鮮明に表示するため)
+            scale: 2
         }).then(canvas => {
-            // 4. JPEG画像としてダウンロード
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
             const link = document.createElement('a');
             link.download = '地図切り出し画像_300x185mm.jpg';
             link.href = imgData;
             link.click();
             
-            // 5. 非表示にしたマーカーを元に戻す
             markersLayer.addTo(map);
+            if (compass) compass.style.display = '';
+            if (scaleBar) scaleBar.style.display = '';
         }).catch(err => {
             console.error('画像生成エラー:', err);
             alert('画像の生成に失敗しました。');
-            markersLayer.addTo(map); // エラー時も元に戻す
+            
+            markersLayer.addTo(map);
+            if (compass) compass.style.display = '';
+            if (scaleBar) scaleBar.style.display = '';
         });
-    }
+    };
 
     // 初期化実行
     performLiveCalculation();
