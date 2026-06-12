@@ -22,7 +22,7 @@
         .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         
         .map-outer-wrapper { position: relative; width: 1134px; height: 700px; background: #fff; border: 2px solid #2c3e50; box-sizing: border-box; overflow: hidden; }
-        #map { width: 100%; height: 100%; }
+        #map { width: 100%; height: 100%; cursor: crosshair; } /* マウスカーソルを十字に変更 */
         .error-overlay { padding: 30px; color: #e74c3c; font-weight: bold; font-size: 14px; background: #fdf0ed; height: 100%; box-sizing: border-box; }
 
         .permanent-marker-label { background: rgba(255, 255, 255, 0.92); border: 1px solid #2c3e50; border-radius: 4px; padding: 3px 7px; font-size: 12px; font-weight: bold; color: #2c3e50; box-shadow: 0 1px 4px rgba(0,0,0,0.2); white-space: nowrap; }
@@ -76,9 +76,9 @@
     <div class="header-flex">
         <div>
             <h1>高精度地図マッピング・図面生成システム (九州地方専用版)</h1>
-            <p style="margin: 0; color: #666; font-size: 13px;">座標系の相互変換(Proj4js)、10進法・度分秒・XY座標・写真EXIFからの位置情報入力に対応しています。</p>
+            <p style="margin: 0; color: #666; font-size: 13px;">地図上をクリック(タップ)して位置を指定・取得できるようになりました。</p>
         </div>
-        <button type="button" class="btn-export-img" onclick="exportMapImage()">📸 地図の切り出し保存 (マーカー・装飾非表示)</button>
+        <button type="button" class="btn-export-img" onclick="exportMapImage()">📸 地図の切り出し保存 (マーカー非表示)</button>
     </div>
 
     <div class="grid">
@@ -206,8 +206,9 @@
     let markersLayer = null;
     let dbPoints = [];
     let photoExtractedLatLng = null;
+    let tempMarker = null; // 【追加】地図タップ時の仮ピン用変数
 
-    // --- セーフティ機構（外部ライブラリがブロックされた場合でも動作を継続する） ---
+    // --- セーフティ機構 ---
     const isProj4Loaded = typeof proj4 !== 'undefined';
     const isLeafletLoaded = typeof L !== 'undefined';
 
@@ -251,15 +252,34 @@
 
             map.on('zoomend moveend', updateScaleElements);
             
+            // 【変更】地図をクリックした際の動作（仮ピンの表示）
             map.on('click', function(e) {
                 if (e.latlng.lat < 29.0 || e.latlng.lat > 35.5 || e.latlng.lng < 127.0 || e.latlng.lng > 132.5) {
                     alert("九州地方の計測範囲外です。選択範囲を九州エリア内にしてください。");
                     return;
                 }
+
+                // 既に仮ピンがあれば消す
+                if (tempMarker) {
+                    map.removeLayer(tempMarker);
+                }
+
+                // 新しい位置に仮ピンを立て、吹き出しを表示
+                tempMarker = L.marker(e.latlng).addTo(map);
+                tempMarker.bindPopup(
+                    "<div style='text-align:center; font-size:13px;'>" +
+                    "<b>📍 選択中の地点</b><br>" +
+                    "緯度: " + e.latlng.lat.toFixed(6) + "<br>" +
+                    "経度: " + e.latlng.lng.toFixed(6) +
+                    "</div>"
+                ).openPopup();
+
+                // フォームを「①十進法度」タブに切り替え
                 document.querySelector('input[value="decimal"]').checked = true;
                 document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
                 document.getElementById('section-decimal').classList.add('active');
 
+                // 値を入力してプレビュー計算を実行
                 document.getElementById('p-lat').value = e.latlng.lat.toFixed(6);
                 document.getElementById('p-lng').value = e.latlng.lng.toFixed(6);
                 performLiveCalculation();
@@ -268,8 +288,7 @@
             console.error("Leafletの初期化エラー:", error);
         }
     } else {
-        // ライブラリが読み込めなかった場合のエラー表示
-        document.getElementById('map').innerHTML = '<div class="error-overlay">【セキュリティ制限によるエラー】<br><br>地図ライブラリ(Leaflet)がブラウザによりブロックされています。<br>このHTMLファイルを直接PCで開いている場合、Edge等のセキュリティ機能が外部通信を遮断することがあります。<br><br>※プレビューや座標計算は引き続き可能ですが、地図の表示・切り出しを行うには、以前作成された「GitHub Pages」のURLからアクセスしてください。</div>';
+        document.getElementById('map').innerHTML = '<div class="error-overlay">【セキュリティ制限によるエラー】<br><br>地図ライブラリ(Leaflet)がブラウザによりブロックされています。<br>GitHub PagesのURLからアクセスしてください。</div>';
     }
 
     // --- スケールバー連動処理 ---
@@ -418,6 +437,7 @@
         }
     });
 
+    // --- 登録ボタンを押した時の処理 ---
     document.getElementById('survey-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const coords = getCurrentLatLng();
@@ -434,6 +454,13 @@
                 ele: parseFloat(document.getElementById('p-ele').value) || 0,
                 x: xy[1], y: xy[0]
             });
+            
+            // 【変更】登録が完了したら、仮のピンを消す
+            if (tempMarker) {
+                if(map) map.removeLayer(tempMarker);
+                tempMarker = null;
+            }
+
             render();
             if(map) map.panTo([coords.lat, coords.lng]);
             document.getElementById('p-name').value = "";
@@ -479,13 +506,17 @@
         }
     };
 
+    // --- 画像の切り出し処理 ---
     window.exportMapImage = async function() {
         if (!map || typeof html2canvas === 'undefined') {
             alert("地図表示、または画像生成システムがセキュリティ制限によりブロックされているため切り出しできません。");
             return;
         }
 
-        map.removeLayer(markersLayer);
+        // マーカー類（登録済みピンと、仮ピンの両方）を非表示
+        if (markersLayer) map.removeLayer(markersLayer);
+        if (tempMarker) map.removeLayer(tempMarker);
+        
         const compass = document.getElementById('map-compass');
         const scaleBar = document.getElementById('map-scale');
         
@@ -507,14 +538,17 @@
             link.href = imgData;
             link.click();
             
-            markersLayer.addTo(map);
+            // 非表示にしたものを元に戻す
+            if (markersLayer) markersLayer.addTo(map);
+            if (tempMarker) tempMarker.addTo(map);
             if (compass) compass.style.display = '';
             if (scaleBar) scaleBar.style.display = '';
         }).catch(err => {
             console.error('画像生成エラー:', err);
             alert('画像の生成に失敗しました。');
             
-            markersLayer.addTo(map);
+            if (markersLayer) markersLayer.addTo(map);
+            if (tempMarker) tempMarker.addTo(map);
             if (compass) compass.style.display = '';
             if (scaleBar) scaleBar.style.display = '';
         });
