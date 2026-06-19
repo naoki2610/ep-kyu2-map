@@ -57,7 +57,6 @@
         .calc-preview { background-color: #eef7f2; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
         .calc-preview p { margin: 4px 0; font-size: 12px; font-family: monospace; }
         
-        /* ボタン系装飾 */
         .btn { background-color: #27ae60; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; }
         .btn:hover { background-color: #219653; }
         .btn-excel { background-color: #2e7d32; display: inline-flex; align-items: center; justify-content: center; width: auto; padding: 10px 18px; margin-bottom: 10px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;}
@@ -71,7 +70,6 @@
         th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; }
         .photo-status { font-size: 11px; color: #e67e22; font-weight: bold; margin-top: 5px; }
 
-        /* QRモーダル */
         #qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
         .qr-box { background: #fff; padding: 30px; border-radius: 8px; text-align: center; max-width: 90%; }
         .qr-box h3 { margin-top: 0; color: #2c3e50; }
@@ -95,7 +93,7 @@
     <div class="header-flex">
         <div>
             <h1>高精度地図マッピング・図面生成システム (九州地方専用版)</h1>
-            <p style="margin: 0; color: #666; font-size: 13px;">現在地追従・QR共有・地図タップ・<strong>現在地の直接記録機能</strong>に対応。</p>
+            <p style="margin: 0; color: #666; font-size: 13px;">現在地追従・QR共有・地図タップ・<strong>地理院APIでの標高取得</strong>に対応。</p>
         </div>
         <div style="display:flex; gap:10px; flex-wrap: wrap;">
             <button type="button" class="btn-location" id="gps-btn" onclick="toggleGPS()">🛰️ 現在地を追従表示 (ナビ)</button>
@@ -184,7 +182,7 @@
                 <div id="section-current" class="input-section">
                     <div class="form-group">
                         <label>スマートフォンのGPSから今の場所を取得します</label>
-                        <button type="button" class="btn" style="background-color:#3498db; width:100%; margin-bottom:5px; padding:10px;" onclick="fetchCurrentLocation()">📍 今いる場所の座標を取得</button>
+                        <button type="button" class="btn" style="background-color:#3498db; width:100%; margin-bottom:5px; padding:10px;" onclick="fetchCurrentLocation()">📍 今いる場所の座標と標高を取得</button>
                         <div id="current-gps-status" class="photo-status">ボタンを押して取得してください</div>
                     </div>
                 </div>
@@ -262,7 +260,6 @@
         return "EPSG:6670";
     }
 
-    // --- 共有URLからデータを復元する処理 ---
     window.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
         if (params.has('share_data')) {
@@ -272,15 +269,11 @@
                 points.forEach(pt => {
                     const parts = pt.split('|');
                     if (parts.length === 5) {
-                        const name = parts[0];
-                        const lat = parseFloat(parts[1]);
-                        const lng = parseFloat(parts[2]);
-                        const zone = parseInt(parts[3]);
-                        const ele = parseFloat(parts[4]);
+                        const name = parts[0]; const lat = parseFloat(parts[1]); const lng = parseFloat(parts[2]);
+                        const zone = parseInt(parts[3]); const ele = parseFloat(parts[4]);
                         let x = 0, y = 0;
                         if (isProj4Loaded) {
-                            const xy = proj4('EPSG:4326', getEpsg(zone), [lng, lat]);
-                            x = xy[1]; y = xy[0];
+                            const xy = proj4('EPSG:4326', getEpsg(zone), [lng, lat]); x = xy[1]; y = xy[0];
                         }
                         dbPoints.push({ name, lat, lng, zone, ele, x, y });
                     }
@@ -293,7 +286,6 @@
         }
     });
 
-    // --- マップ初期化処理 ---
     if (isLeafletLoaded) {
         try {
             const stdMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { attribution: '&copy; GSI Japan', crossOrigin: true });
@@ -303,10 +295,7 @@
             
             const startCenter = dbPoints.length > 0 ? [dbPoints[0].lat, dbPoints[0].lng] : [31.186043, 130.833448];
             
-            map = L.map('map', { 
-                center: startCenter, zoom: dbPoints.length > 0 ? 15 : 11, layers: [stdMap], zoomControl: false, attributionControl: false 
-            });
-            
+            map = L.map('map', { center: startCenter, zoom: dbPoints.length > 0 ? 15 : 11, layers: [stdMap], zoomControl: false, attributionControl: false });
             L.control.layers({ "標準地図": stdMap, "航空写真": orthoMap, "色別標高図": reliefMap, "陰影起伏図": hillshadeMap }, null, { position: 'topright' }).addTo(map);
 
             markersLayer = L.layerGroup().addTo(map);
@@ -314,17 +303,37 @@
 
             map.on('zoomend moveend', updateScaleElements);
             
-            map.on('click', function(e) {
+            // 【変更】地図タップ時に地理院APIから標高を自動取得する処理
+            map.on('click', async function(e) {
                 if (e.latlng.lat < 29.0 || e.latlng.lat > 35.5 || e.latlng.lng < 127.0 || e.latlng.lng > 132.5) { alert("九州地方の計測範囲外です。"); return; }
                 if (tempMarker) map.removeLayer(tempMarker);
+                
+                // 計算中表示でピンを立てる
                 tempMarker = L.marker(e.latlng).addTo(map);
-                tempMarker.bindPopup("<div style='text-align:center; font-size:13px;'><b>📍 選択中の地点</b><br>緯度: " + e.latlng.lat.toFixed(6) + "<br>経度: " + e.latlng.lng.toFixed(6) + "</div>").openPopup();
+                tempMarker.bindPopup("<div style='text-align:center; font-size:13px;'><b>📍 選択中の地点</b><br>緯度: " + e.latlng.lat.toFixed(6) + "<br>経度: " + e.latlng.lng.toFixed(6) + "<br><span style='color:#7f8c8d'>標高: 計算中...</span></div>").openPopup();
 
                 document.querySelector('input[value="decimal"]').checked = true;
                 document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
                 document.getElementById('section-decimal').classList.add('active');
                 document.getElementById('p-lat').value = e.latlng.lat.toFixed(6);
                 document.getElementById('p-lng').value = e.latlng.lng.toFixed(6);
+                
+                // 地理院APIから標高を取得
+                try {
+                    const res = await fetch(`https://cyberjapandata2.gsi.go.jp/general/dem/scripts/getelevation.php?lon=${e.latlng.lng}&lat=${e.latlng.lat}&outtype=JSON`);
+                    const data = await res.json();
+                    if (data && data.elevation !== undefined && data.elevation !== "----") {
+                        const ele = parseFloat(data.elevation);
+                        document.getElementById('p-ele').value = ele.toFixed(2);
+                        tempMarker.setPopupContent("<div style='text-align:center; font-size:13px;'><b>📍 選択中の地点</b><br>緯度: " + e.latlng.lat.toFixed(6) + "<br>経度: " + e.latlng.lng.toFixed(6) + "<br><span style='color:#27ae60; font-weight:bold;'>標高: " + ele.toFixed(2) + " m</span></div>");
+                    } else {
+                        document.getElementById('p-ele').value = "0.00";
+                        tempMarker.setPopupContent("<div style='text-align:center; font-size:13px;'><b>📍 選択中の地点</b><br>緯度: " + e.latlng.lat.toFixed(6) + "<br>経度: " + e.latlng.lng.toFixed(6) + "<br><span style='color:#e74c3c'>標高: 取得不可</span></div>");
+                    }
+                } catch(err) {
+                    console.error("標高取得エラー", err);
+                }
+                
                 performLiveCalculation();
             });
         } catch (error) { console.error("Leafletエラー:", error); }
@@ -332,7 +341,6 @@
         document.getElementById('map').innerHTML = '<div class="error-overlay">セキュリティ制限により地図ライブラリがブロックされています。GitHub PagesのURLからアクセスしてください。</div>';
     }
 
-    // --- 現在地(GPS)追従と誤差の可視化 (ナビゲーション用) ---
     window.toggleGPS = function() {
         const btn = document.getElementById('gps-btn');
         if (gpsWatchId !== null) {
@@ -362,36 +370,54 @@
         }
     };
 
-    // --- 【追加】現在地の直接記録 (ワンショットGPS取得) ---
+    // --- 【変更】現在地取得時に地理院APIから標高も取得する処理 ---
     window.fetchCurrentLocation = function() {
         const statusEl = document.getElementById('current-gps-status');
         if (!navigator.geolocation) { statusEl.innerText = "❌ GPS非対応のブラウザです。"; statusEl.style.color = "#e74c3c"; return; }
         
-        statusEl.innerText = "GPS情報を取得中..."; statusEl.style.color = "#3498db";
+        statusEl.innerText = "GPS情報と標高を取得中..."; statusEl.style.color = "#3498db";
 
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 const acc = position.coords.accuracy;
+                const rawAlt = position.coords.altitude; // スマホの生高度(楕円体高)
                 
-                // フォームに値をセット
                 document.getElementById('p-lat').value = lat.toFixed(6);
                 document.getElementById('p-lng').value = lng.toFixed(6);
                 
-                statusEl.innerHTML = `✅ 取得成功: 緯度 ${lat.toFixed(6)}, 経度 ${lng.toFixed(6)}<br><span style="font-size:10px; color:#7f8c8d;">(誤差半径: 約 ${Math.round(acc)} m)</span>`;
+                let elevationText = "取得失敗";
+                // 地理院APIから正確な標高を取得
+                try {
+                    const res = await fetch(`https://cyberjapandata2.gsi.go.jp/general/dem/scripts/getelevation.php?lon=${lng}&lat=${lat}&outtype=JSON`);
+                    const data = await res.json();
+                    if (data && data.elevation !== undefined && data.elevation !== "----") {
+                        const ele = parseFloat(data.elevation);
+                        document.getElementById('p-ele').value = ele.toFixed(2);
+                        elevationText = `${ele.toFixed(2)} m <br>(国土地理院DEM)`;
+                    } else if (rawAlt !== null) {
+                        document.getElementById('p-ele').value = rawAlt.toFixed(2);
+                        elevationText = `${rawAlt.toFixed(2)} m <br>(スマホGPS高度)`;
+                    }
+                } catch(e) {
+                    if (rawAlt !== null) {
+                        document.getElementById('p-ele').value = rawAlt.toFixed(2);
+                        elevationText = `${rawAlt.toFixed(2)} m <br>(スマホGPS高度)`;
+                    }
+                }
+
+                statusEl.innerHTML = `✅ 取得成功: 緯度 ${lat.toFixed(6)}, 経度 ${lng.toFixed(6)}<br><span style="color:#27ae60;">⛰️ 標高: ${elevationText} <br>🎯 誤差半径: 約 ${Math.round(acc)} m</span>`;
                 statusEl.style.color = "#27ae60";
                 
-                // プレビューの計算を即座に実行
                 performLiveCalculation();
                 
-                // 地図を移動して仮ピンを立てる
                 if (map) {
                     map.setView([lat, lng], 17);
                     if (tempMarker) map.removeLayer(tempMarker);
                     tempMarker = L.marker([lat, lng]).addTo(map);
                     tempMarker.bindPopup(
-                        "<div style='text-align:center; font-size:13px;'><b>📍 取得した現在地</b><br>緯度: " + lat.toFixed(6) + "<br>経度: " + lng.toFixed(6) + "</div>"
+                        "<div style='text-align:center; font-size:13px;'><b>📍 取得した現在地</b><br>緯度: " + lat.toFixed(6) + "<br>経度: " + lng.toFixed(6) + "<br><span style='color:#27ae60; font-weight:bold;'>標高: " + elevationText + "</span></div>"
                     ).openPopup();
                 }
             },
@@ -400,31 +426,25 @@
                 statusEl.innerText = "❌ 取得失敗。スマホの位置情報設定を確認してください。";
                 statusEl.style.color = "#e74c3c";
             },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 } // 高精度要求
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
     };
 
-    // --- データ共有機能 (URLパラメータ化 ＆ Web Share / QR) ---
     window.shareData = async function() {
         if (dbPoints.length === 0) { alert("共有するピンが一つもありません。"); return; }
         const dataStr = dbPoints.map(p => `${p.name}|${p.lat.toFixed(6)}|${p.lng.toFixed(6)}|${p.zone}|${p.ele}`).join('~');
         const shareUrl = window.location.href.split('?')[0] + '?share_data=' + encodeURIComponent(dataStr);
 
         if (navigator.share) {
-            try {
-                await navigator.share({ title: '現地調査 測量データ', text: '地図上のピン座標情報を共有します。', url: shareUrl });
-                return; 
-            } catch (err) { console.log('共有キャンセル、QR表示へ移行', err); }
+            try { await navigator.share({ title: '現地調査 測量データ', text: '地図上のピン座標情報を共有します。', url: shareUrl }); return; } 
+            catch (err) { console.log('共有キャンセル、QR表示へ移行', err); }
         }
         
         document.getElementById('qrcode').innerHTML = ""; 
-        try {
-            new QRCode(document.getElementById("qrcode"), { text: shareUrl, width: 220, height: 220 });
-            document.getElementById('qr-modal').style.display = 'flex';
-        } catch(e) { alert("QRコードライブラリの読み込みエラー。"); }
+        try { new QRCode(document.getElementById("qrcode"), { text: shareUrl, width: 220, height: 220 }); document.getElementById('qr-modal').style.display = 'flex'; } 
+        catch(e) { alert("QRコードライブラリの読み込みエラー。"); }
     };
 
-    // --- スケールバー連動 ---
     function updateScaleElements() {
         if (!map) return;
         const centerLatLng = map.getCenter(); const zoom = map.getZoom();
@@ -442,7 +462,6 @@
         document.getElementById('scale-max-text').innerText = (displayMeters >= 1000) ? (displayMeters / 1000) + " km" : displayMeters + " m";
     }
 
-    // --- 入力・計算処理 ---
     document.querySelectorAll('input[name="input_mode"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
@@ -456,7 +475,6 @@
         const zone = parseInt(document.getElementById('p-zone').value);
         let lat = null, lng = null;
 
-        // 【変更】現在地(current)モードの場合も、10進法フォームの値を参照する
         if (mode === 'decimal' || mode === 'current') {
             lat = parseFloat(document.getElementById('p-lat').value); lng = parseFloat(document.getElementById('p-lng').value);
         } else if (mode === 'dms') {
@@ -523,7 +541,6 @@
         } catch (error) { statusEl.innerText = "❌ エラーが発生しました。"; statusEl.style.color = "#e74c3c"; }
     });
 
-    // --- 登録と描画 ---
     document.getElementById('survey-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const coords = getCurrentLatLng();
@@ -555,7 +572,6 @@
         });
     }
 
-    // --- 各種エクスポート処理 ---
     window.exportToExcel = function() {
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
         let csvContent = "地点名,適用系,公共座標 X (南北),公共座標 Y (東西),標高 Z (m),緯度,経度\n";
